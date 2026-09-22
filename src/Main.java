@@ -26,6 +26,7 @@ public class Main {
         Scanner in = new Scanner(System.in);
         while (true) {
             System.out.println("\n1 - Consultar destinos de um e-mail");
+            System.out.println("2 - Caminho crítico entre dois e-mails");
             System.out.println("0 - Sair");
             System.out.print("Opção: ");
 
@@ -33,6 +34,14 @@ public class Main {
                 case "1": {
                     int v = lerVertice(g, in, "E-mail: ");
                     if (v >= 0) mostraDestinos(g, v);
+                    break;
+                }
+                case "2": {
+                    int a = lerVertice(g, in, "E-mail de origem (A): ");
+                    if (a < 0) break;
+                    int c = lerVertice(g, in, "E-mail de destino (C): ");
+                    if (c < 0) break;
+                    g.imprime_caminho_critico(a, c);
                     break;
                 }
                 case "0":

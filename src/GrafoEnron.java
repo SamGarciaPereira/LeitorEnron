@@ -192,4 +192,86 @@ public class GrafoEnron {
             }
         }
     }
+
+    // caminho de maior dependência acumulada entre origem e destino, de forma aproximada:
+    // adapta o Dijkstra usando 1/peso como custo da aresta, já que peso maior representa
+    // maior dependência. minimizar a soma de 1/peso tende a preferir arestas de peso alto,
+    // aproximando (sem garantir) o caminho de maior soma de pesos originais.
+    public CaminhoCritico caminhoCritico(int origem, int destino) {
+        if (!verticeValido(origem) || !verticeValido(destino)) {
+            return new CaminhoCritico(Collections.emptyList(), 0);
+        }
+
+        double[] custo = new double[numVertices];
+        int[] anterior = new int[numVertices];
+        boolean[] visitado = new boolean[numVertices];
+        java.util.Arrays.fill(custo, Double.POSITIVE_INFINITY);
+        java.util.Arrays.fill(anterior, -1);
+        custo[origem] = 0;
+
+        for (int cont = 0; cont < numVertices; cont++) {
+            int u = -1;
+            double menor = Double.POSITIVE_INFINITY;
+            for (int i = 0; i < numVertices; i++) {
+                if (!visitado[i] && custo[i] < menor) {
+                    menor = custo[i];
+                    u = i;
+                }
+            }
+            if (u == -1) break;
+
+            // finalizar u e nunca reabri-lo garante que o caminho reconstruído por
+            // "anterior" não forme ciclo, mesmo que o grafo original tenha um.
+            visitado[u] = true;
+            if (u == destino) break;
+
+            for (Aresta a : vertices[u].adjacencias) {
+                if (visitado[a.destino]) continue;
+                double custoAresta = 1.0 / a.peso;
+                if (custo[u] + custoAresta < custo[a.destino]) {
+                    custo[a.destino] = custo[u] + custoAresta;
+                    anterior[a.destino] = u;
+                }
+            }
+        }
+
+        if (custo[destino] == Double.POSITIVE_INFINITY) {
+            return new CaminhoCritico(Collections.emptyList(), 0);
+        }
+
+        List<Integer> caminho = new ArrayList<>();
+        int dependencia = 0;
+        for (int v = destino; v != -1; v = anterior[v]) {
+            caminho.add(v);
+            if (anterior[v] != -1) {
+                dependencia += pesoAresta(anterior[v], v);
+            }
+        }
+        Collections.reverse(caminho);
+        return new CaminhoCritico(caminho, dependencia);
+    }
+
+    private int pesoAresta(int i, int j) {
+        for (Aresta a : vertices[i].adjacencias) {
+            if (a.destino == j) return a.peso;
+        }
+        return 0;
+    }
+
+    public void imprime_caminho_critico(int origem, int destino) {
+        CaminhoCritico r = caminhoCritico(origem, destino);
+        if (r.caminho.isEmpty()) {
+            System.out.println("Não há caminho entre " + getInformacao(origem)
+                    + " e " + getInformacao(destino) + ".");
+            return;
+        }
+        System.out.print("Caminho crítico de " + getInformacao(origem) + " até "
+                + getInformacao(destino) + ": ");
+        for (int i = 0; i < r.caminho.size(); i++) {
+            System.out.print(getInformacao(r.caminho.get(i)));
+            if (i < r.caminho.size() - 1) System.out.print(" -> ");
+        }
+        System.out.println();
+        System.out.println("Dependência acumulada: " + r.dependenciaAcumulada);
+    }
 }
