@@ -274,4 +274,139 @@ public class GrafoEnron {
         System.out.println();
         System.out.println("Dependência acumulada: " + r.dependenciaAcumulada);
     }
+
+    public int getNumArestas() {
+        int totalArestas = 0;
+        for (int i = 0; i < numVertices; i++) {
+            totalArestas += vertices[i].adjacencias.size();
+        }
+        return totalArestas;
+    }
+
+    // calcula e exibe os 20 indivíduos com maior grau de saída e entrada
+    public void imprimeTop20Graus() {
+        int[] grauSaida = new int[numVertices];
+        int[] grauEntrada = new int[numVertices];
+
+        // calcula os graus de saída e entrada
+        for (int i = 0; i < numVertices; i++) {
+            int qtdAdjacencias = vertices[i].adjacencias.size();
+            grauSaida[i] = qtdAdjacencias;
+
+            for (int j = 0; j < qtdAdjacencias; j++) {
+                Aresta a = vertices[i].adjacencias.get(j);
+                grauEntrada[a.destino]++;
+            }
+        }
+
+        System.out.println("\n--- Top 20 Indivíduos com Maior Grau de Saída ---");
+        imprimeTop20(grauSaida);
+
+        System.out.println("\n--- Top 20 Indivíduos com Maior Grau de Entrada ---");
+        imprimeTop20(grauEntrada);
+    }
+
+    // ordena e imprime os 20 maiores valores de um vetor de graus
+    private void imprimeTop20(int[] graus) {
+        int[] maioresGraus = new int[20];
+        int[] indicesMaiores = new int[20];
+
+        for (int i = 0; i < 20; i++) {
+            indicesMaiores[i] = -1;
+            maioresGraus[i] = -1;
+        }
+
+        for (int i = 0; i < numVertices; i++) {
+            int grauAtual = graus[i];
+
+            if (grauAtual > maioresGraus[19]) {
+                int posicaoInsercao = 19;
+
+                // empurra os menores para baixo para abrir espaço na posição correta
+                while (posicaoInsercao > 0 && grauAtual > maioresGraus[posicaoInsercao - 1]) {
+                    maioresGraus[posicaoInsercao] = maioresGraus[posicaoInsercao - 1];
+                    indicesMaiores[posicaoInsercao] = indicesMaiores[posicaoInsercao - 1];
+                    posicaoInsercao--;
+                }
+
+                // insere o novo grau e índice na posição aberta
+                maioresGraus[posicaoInsercao] = grauAtual;
+                indicesMaiores[posicaoInsercao] = i;
+            }
+        }
+
+        for (int i = 0; i < 20; i++) {
+            int v = indicesMaiores[i];
+            if (v == -1 || maioresGraus[i] == 0) break;
+
+            System.out.println((i + 1) + "º: " + getInformacao(v) + " (Grau: " + maioresGraus[i] + ")");
+        }
+    }
+
+    // inicia a busca em profundidade retornando a lista de nós do caminho
+    public List<Integer> buscaEmProfundidade(int origem, int destino) {
+        if (!verticeValido(origem) || !verticeValido(destino)) {
+            return Collections.emptyList();
+        }
+
+        boolean[] visitado = new boolean[numVertices];
+        List<Integer> caminho = new ArrayList<>();
+
+        if (dfsRecursiva(origem, destino, visitado, caminho)) {
+            return caminho;
+        }
+
+        return Collections.emptyList();
+    }
+
+    // recursão da busca, o vetor de visitados é compartilhado para evitar ciclos
+    private boolean dfsRecursiva(int u, int destino, boolean[] visitado, List<Integer> caminho) {
+        visitado[u] = true;
+        caminho.add(u);
+
+        if (u == destino) {
+            return true;
+        }
+
+        int qtdAdjacencias = vertices[u].adjacencias.size();
+
+        for (int i = 0; i < qtdAdjacencias; i++) {
+            Aresta a = vertices[u].adjacencias.get(i);
+
+            if (!visitado[a.destino]) {
+                if (dfsRecursiva(a.destino, destino, visitado, caminho)) {
+                    return true;
+                }
+            }
+        }
+
+        caminho.remove(caminho.size() - 1);
+        return false;
+    }
+
+    public void imprimeDFS(int origem, int destino) {
+        List<Integer> caminho = buscaEmProfundidade(origem, destino);
+
+        if (caminho.isEmpty()) {
+            System.out.println("Não há caminho alcançável de " + getInformacao(origem)
+                    + " até " + getInformacao(destino) + " (DFS).");
+            return;
+        }
+
+        int saltos = caminho.size() - 1;
+        System.out.println("\nCaminho DFS de " + getInformacao(origem) + " até " + getInformacao(destino) + ":");
+        System.out.println("Total de indivíduos no caminho: " + caminho.size());
+        System.out.println("Total de saltos: " + saltos);
+        System.out.println("Trajeto:");
+
+        for (int i = 0; i < caminho.size(); i++) {
+            if (i == 0) {
+                System.out.println("  [Origem]  " + getInformacao(caminho.get(i)));
+            } else if (i == caminho.size() - 1) {
+                System.out.println("  [Destino] " + getInformacao(caminho.get(i)));
+            } else {
+                System.out.println("    (" + i + ") -> " + getInformacao(caminho.get(i)));
+            }
+        }
+    }
 }

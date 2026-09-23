@@ -27,6 +27,8 @@ public class Main {
         while (true) {
             System.out.println("\n1 - Consultar destinos de um e-mail");
             System.out.println("2 - Caminho crítico entre dois e-mails");
+            System.out.println("3 - Exibir métricas gerais do grafo");
+            System.out.println("4 - Busca em Profundidade DFS");
             System.out.println("0 - Sair");
             System.out.print("Opção: ");
 
@@ -42,6 +44,21 @@ public class Main {
                     int c = lerVertice(g, in, "E-mail de destino (C): ");
                     if (c < 0) break;
                     g.imprime_caminho_critico(a, c);
+                    break;
+                }
+                case "3": {
+                    System.out.println("\nMÉTRICAS DO GRAFO:");
+                    System.out.println("Número de vértices: " + g.getNumVertices());
+                    System.out.println("Número de arestas: " + g.getNumArestas());
+                    g.imprimeTop20Graus();
+                    break;
+                }
+                case "4": {
+                    int x = lerVertice(g, in, "E-mail de origem (X): ");
+                    if (x < 0) break;
+                    int y = lerVertice(g, in, "E-mail de destino (Y): ");
+                    if (y < 0) break;
+                    g.imprimeDFS(x, y);
                     break;
                 }
                 case "0":
