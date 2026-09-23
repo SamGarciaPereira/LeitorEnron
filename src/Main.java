@@ -29,6 +29,8 @@ public class Main {
             System.out.println("2 - Caminho crítico entre dois e-mails");
             System.out.println("3 - Exibir métricas gerais do grafo");
             System.out.println("4 - Busca em Profundidade DFS");
+            System.out.println("5 - Busca em Largura BFS");
+            System.out.println("6 - Nós a distância D de um e-mail");
             System.out.println("0 - Sair");
             System.out.print("Opção: ");
 
@@ -59,6 +61,26 @@ public class Main {
                     int y = lerVertice(g, in, "E-mail de destino (Y): ");
                     if (y < 0) break;
                     g.imprimeDFS(x, y);
+                    break;
+                }
+                case "5": {
+                    int x = lerVertice(g, in, "E-mail de origem (X): ");
+                    if (x < 0) break;
+                    int y = lerVertice(g, in, "E-mail de destino (Y): ");
+                    if (y < 0) break;
+                    g.imprimeBFS(x, y);
+                    break;
+                }
+                case "6": {
+                    int n = lerVertice(g, in, "E-mail (N): ");
+                    if (n < 0) break;
+                    System.out.print("Distância (D): ");
+                    try {
+                        int d = Integer.parseInt(in.nextLine().trim());
+                        g.imprimeNosADistancia(n, d);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Distância inválida.");
+                    }
                     break;
                 }
                 case "0":

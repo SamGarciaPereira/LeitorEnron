@@ -6,6 +6,8 @@ Matheus Pelissari
 Samuel Pereira
  */
 
+import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -407,6 +409,136 @@ public class GrafoEnron {
             } else {
                 System.out.println("    (" + i + ") -> " + getInformacao(caminho.get(i)));
             }
+        }
+    }
+
+    // busca em largura de origem até destino. devolve o caminho (lista de índices)
+    // ou lista vazia se destino não for alcançável. como a BFS explora o grafo em
+    // camadas (distância 1, depois 2, ...), o caminho encontrado é o de menor
+    // número de saltos. nosVisitados, se não for null, recebe a ordem de visita.
+    public List<Integer> buscaEmLargura(int origem, int destino, List<Integer> nosVisitados) {
+        if (!verticeValido(origem) || !verticeValido(destino)) {
+            return Collections.emptyList();
+        }
+ 
+        boolean[] visitado = new boolean[numVertices];
+        int[] anterior = new int[numVertices];   // de qual vértice cada um foi descoberto
+        Arrays.fill(anterior, -1);
+ 
+        ArrayDeque<Integer> fila = new ArrayDeque<>();
+        visitado[origem] = true;   // marca ao entrar na fila: nenhum vértice entra duas vezes
+        fila.add(origem);
+ 
+        boolean achou = false;
+        while (!fila.isEmpty()) {
+            int u = fila.poll();
+            if (nosVisitados != null) nosVisitados.add(u);
+ 
+            if (u == destino) {
+                achou = true;
+                break;
+            }
+ 
+            for (Aresta a : vertices[u].adjacencias) {
+                // o vetor de visitados impede reentrar em vértices já vistos,
+                // então ciclos do grafo não geram loop infinito.
+                if (!visitado[a.destino]) {
+                    visitado[a.destino] = true;
+                    anterior[a.destino] = u;
+                    fila.add(a.destino);
+                }
+            }
+        }
+ 
+        if (!achou) {
+            return Collections.emptyList();
+        }
+ 
+        // reconstrói o caminho voltando do destino até a origem pelo vetor anterior
+        List<Integer> caminho = new ArrayList<>();
+        for (int v = destino; v != -1; v = anterior[v]) {
+            caminho.add(v);
+        }
+        Collections.reverse(caminho);
+        return caminho;
+    }
+ 
+    public List<Integer> buscaEmLargura(int origem, int destino) {
+        return buscaEmLargura(origem, destino, null);
+    }
+ 
+    public void imprimeBFS(int origem, int destino) {
+        List<Integer> visitados = new ArrayList<>();
+        List<Integer> caminho = buscaEmLargura(origem, destino, visitados);
+ 
+        if (caminho.isEmpty()) {
+            System.out.println("Não há caminho alcançável de " + getInformacao(origem)
+                    + " até " + getInformacao(destino) + " (BFS).");
+            System.out.println("Vértices visitados na busca: " + visitados.size());
+            return;
+        }
+ 
+        System.out.println("\nCaminho BFS de " + getInformacao(origem) + " até " + getInformacao(destino) + ":");
+        System.out.println("Vértices visitados na busca: " + visitados.size());
+        System.out.println("Total de indivíduos no caminho: " + caminho.size());
+        System.out.println("Total de saltos (menor possível): " + (caminho.size() - 1));
+        System.out.println("Trajeto:");
+ 
+        for (int i = 0; i < caminho.size(); i++) {
+            if (i == 0) {
+                System.out.println("  [Origem]  " + getInformacao(caminho.get(i)));
+            } else if (i == caminho.size() - 1) {
+                System.out.println("  [Destino] " + getInformacao(caminho.get(i)));
+            } else {
+                System.out.println("    (" + i + ") -> " + getInformacao(caminho.get(i)));
+            }
+        }
+    }
+ 
+    // nós que estão exatamente a D arestas de N. a distância usada é a menor
+    // possível (em número de arestas), calculada por uma BFS em camadas a partir de N.
+    // um nó alcançável em 1 e em 3 saltos está a distância 1, não 3.
+    public List<Integer> nosADistancia(int n, int d) {
+        List<Integer> resultado = new ArrayList<>();
+        if (!verticeValido(n) || d < 0) {
+            return resultado;
+        }
+ 
+        int[] distancia = new int[numVertices];
+        Arrays.fill(distancia, -1);   // -1 = ainda não visitado; evita ciclos
+        distancia[n] = 0;
+ 
+        ArrayDeque<Integer> fila = new ArrayDeque<>();
+        fila.add(n);
+ 
+        while (!fila.isEmpty()) {
+            int u = fila.poll();
+ 
+            if (distancia[u] == d) {
+                resultado.add(u);
+                continue;   // não precisa expandir além da distância pedida
+            }
+ 
+            for (Aresta a : vertices[u].adjacencias) {
+                if (distancia[a.destino] == -1) {
+                    distancia[a.destino] = distancia[u] + 1;
+                    fila.add(a.destino);
+                }
+            }
+        }
+ 
+        return resultado;
+    }
+ 
+    public void imprimeNosADistancia(int n, int d) {
+        if (d < 0) {
+            System.out.println("A distância deve ser maior ou igual a zero.");
+            return;
+        }
+        List<Integer> nos = nosADistancia(n, d);
+        System.out.println("\nNós a distância " + d + " de " + getInformacao(n) + ": " + nos.size());
+        for (int v : nos) {
+            System.out.println("  - " + getInformacao(v));
         }
     }
 }
