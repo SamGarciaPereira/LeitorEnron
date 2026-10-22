@@ -31,6 +31,9 @@ public class Main {
             System.out.println("4 - Busca em Profundidade DFS");
             System.out.println("5 - Busca em Largura BFS");
             System.out.println("6 - Nós a distância D de um e-mail");
+            System.out.println("7 - Verificar se o grafo é cíclico");
+            System.out.println("8 - Componentes do grafo");
+            System.out.println("9 - Verificar se o grafo é conexo");
             System.out.println("0 - Sair");
             System.out.print("Opção: ");
 
@@ -83,6 +86,19 @@ public class Main {
                     }
                     break;
                 }
+                case "7":
+                    g.imprimeCiclo();
+                    break;
+                case "8": {
+                    g.imprimeComponentes(20, 10);
+                    String arq = "componentes.txt";
+                    g.salvaComponentes(arq);
+                    System.out.println("\nLista completa de componentes gravada em " + arq);
+                    break;
+                }
+                case "9":
+                    g.imprimeConexidade();
+                    break;
                 case "0":
                     return;
                 default:

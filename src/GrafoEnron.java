@@ -20,7 +20,7 @@ public class GrafoEnron {
 
     public static class Aresta {
         private final int destino;   // índice do vértice de destino
-        private int peso;
+        private int peso;   // nº de mensagens 
 
         Aresta(int destino, int peso) {
             this.destino = destino;
@@ -37,7 +37,7 @@ public class GrafoEnron {
     }
 
     private static class Vertice {
-        String informacao = "";
+        String informacao = "";   // o rótulo (e-mail)
         List<Aresta> adjacencias = new ArrayList<>();
     }
 
@@ -46,8 +46,8 @@ public class GrafoEnron {
     private final Vertice[] vertices;
     private final int numVertices;
 
-    // rótulo -> índice. evita varrer todos os vértices a cada consulta.
-    private final Map<String, Integer> indicePorInformacao = new HashMap<>();
+    // rótulo (e-mail) -> índice. evita varrer todos os vértices a cada consulta.
+    private final Map<String, Integer> indicePorInformacao = new HashMap<>();   
 
     public GrafoEnron(int numVertices) {
         this.numVertices = numVertices;
@@ -539,6 +539,219 @@ public class GrafoEnron {
         System.out.println("\nNós a distância " + d + " de " + getInformacao(n) + ": " + nos.size());
         for (int v : nos) {
             System.out.println("  - " + getInformacao(v));
+        }
+    }
+
+    // =====================================================================
+    // QUESTÃO 1 - verificação de ciclo
+    // =====================================================================
+
+    // estados da DFS: BRANCO = não visitado, CINZA = na pilha de recursão
+    // (caminho atual), PRETO = vértice e todos os seus descendentes concluídos.
+    private static final int BRANCO = 0;
+    private static final int CINZA = 1;
+    private static final int PRETO = 2;
+
+    // o grafo é cíclico se contém ao menos um ciclo dirigido.
+    public boolean ehCiclico() {
+        return !encontraCiclo().isEmpty();
+    }
+
+    // devolve um ciclo dirigido (v0 -> v1 -> ... -> v0) ou lista vazia se o grafo
+    // for acíclico. a DFS percorre todos os vértices: num grafo dirigido há ciclo
+    // se, e somente se, a busca encontra uma aresta de retorno, isto é, uma aresta
+    // u -> v em que v ainda está CINZA (é ancestral de u no caminho atual).
+    // aresta para vértice PRETO não indica ciclo: v já foi concluído por outro ramo.
+    // a DFS é iterativa (pilha explícita) para não estourar a pilha da JVM nos
+    // caminhos longos do grafo da Enron.
+    public List<Integer> encontraCiclo() {
+        int[] cor = new int[numVertices];      // inicia tudo BRANCO
+        int[] pai = new int[numVertices];      // para reconstruir o ciclo
+        int[] proxAresta = new int[numVertices]; // próxima aresta a examinar de cada vértice
+        ArrayDeque<Integer> pilha = new ArrayDeque<>();
+
+        for (int s = 0; s < numVertices; s++) {
+            if (cor[s] != BRANCO) continue;
+            cor[s] = CINZA;
+            pai[s] = -1;
+            pilha.push(s);
+
+            while (!pilha.isEmpty()) {
+                int u = pilha.peek();
+                List<Aresta> adj = vertices[u].adjacencias;
+
+                if (proxAresta[u] < adj.size()) {
+                    int v = adj.get(proxAresta[u]++).destino;
+                    if (cor[v] == BRANCO) {
+                        cor[v] = CINZA;
+                        pai[v] = u;
+                        pilha.push(v);
+                    } else if (cor[v] == CINZA) {
+                        // aresta de retorno u -> v: o ciclo é v -> ... -> u -> v
+                        List<Integer> ciclo = new ArrayList<>();
+                        for (int w = u; w != v; w = pai[w]) {
+                            ciclo.add(w);
+                        }
+                        ciclo.add(v);
+                        Collections.reverse(ciclo);
+                        ciclo.add(v);   // fecha o ciclo
+                        return ciclo;
+                    }
+                } else {
+                    cor[u] = PRETO;   // todas as arestas de u examinadas
+                    pilha.pop();
+                }
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    public void imprimeCiclo() {
+        List<Integer> ciclo = encontraCiclo();
+        if (ciclo.isEmpty()) {
+            System.out.println("O grafo é ACÍCLICO (não há ciclo dirigido).");
+            return;
+        }
+        System.out.println("O grafo é CÍCLICO. Exemplo de ciclo ("
+                + (ciclo.size() - 1) + " aresta(s)):");
+        for (int i = 0; i < ciclo.size(); i++) {
+            System.out.print(getInformacao(ciclo.get(i)));
+            if (i < ciclo.size() - 1) System.out.print(" -> ");
+        }
+        System.out.println();
+    }
+
+    // =====================================================================
+    // QUESTÃO 2 - componentes (fracamente conexos)
+    // =====================================================================
+
+    // identifica os componentes do grafo ignorando o sentido das arestas: u e v
+    // ficam no mesmo componente se houver caminho entre eles quando cada aresta
+    // u -> v é tratada como u - v. cada componente é a lista ordenada de índices
+    // dos vértices membros; a lista de componentes vem do maior para o menor.
+    // complexidade O(V + E): cada vértice entra uma vez na fila e cada aresta é
+    // examinada uma vez em cada sentido.
+    public List<List<Integer>> componentes() {
+        // a lista de adjacência guarda apenas as arestas de saída. para andar no
+        // sentido contrário, monta-se uma vez a lista de predecessores (entrada).
+        List<List<Integer>> entrada = new ArrayList<>(numVertices);
+        for (int i = 0; i < numVertices; i++) {
+            entrada.add(new ArrayList<>());
+        }
+        for (int u = 0; u < numVertices; u++) {
+            for (Aresta a : vertices[u].adjacencias) {
+                entrada.get(a.destino).add(u);
+            }
+        }
+
+        boolean[] visitado = new boolean[numVertices];
+        List<List<Integer>> componentes = new ArrayList<>();
+        ArrayDeque<Integer> fila = new ArrayDeque<>();
+
+        for (int s = 0; s < numVertices; s++) {
+            if (visitado[s]) continue;
+
+            // s não pertence a nenhum componente já encontrado: inicia um novo
+            // e uma BFS recolhe todos os vértices alcançáveis sem considerar sentido.
+            List<Integer> membros = new ArrayList<>();
+            visitado[s] = true;
+            fila.add(s);
+
+            while (!fila.isEmpty()) {
+                int u = fila.poll();
+                membros.add(u);
+
+                for (Aresta a : vertices[u].adjacencias) {   // u -> v
+                    if (!visitado[a.destino]) {
+                        visitado[a.destino] = true;
+                        fila.add(a.destino);
+                    }
+                }
+                for (int v : entrada.get(u)) {                // v -> u
+                    if (!visitado[v]) {
+                        visitado[v] = true;
+                        fila.add(v);
+                    }
+                }
+            }
+
+            Collections.sort(membros);
+            componentes.add(membros);
+        }
+
+        componentes.sort((a, b) -> Integer.compare(b.size(), a.size()));
+        return componentes;
+    }
+
+    // resumo: quantidade, distribuição de tamanhos e os membros dos componentes.
+    // os componentes com mais de maxMembros vértices são exibidos parcialmente.
+    public void imprimeComponentes(int maxComponentes, int maxMembros) {
+        List<List<Integer>> comps = componentes();
+        System.out.println("\nNúmero de componentes: " + comps.size());
+        if (comps.isEmpty()) return;
+
+        System.out.println("Maior componente: " + comps.get(0).size() + " vértices ("
+                + String.format("%.2f", 100.0 * comps.get(0).size() / numVertices) + "% do grafo)");
+
+        // tamanho -> quantidade de componentes com esse tamanho
+        java.util.TreeMap<Integer, Integer> distribuicao =
+                new java.util.TreeMap<>(Collections.reverseOrder());
+        for (List<Integer> c : comps) {
+            distribuicao.merge(c.size(), 1, Integer::sum);
+        }
+        System.out.println("Distribuição (tamanho: quantidade de componentes):");
+        for (Map.Entry<Integer, Integer> e : distribuicao.entrySet()) {
+            System.out.println("  " + e.getKey() + " vértice(s): " + e.getValue());
+        }
+
+        int limite = Math.min(maxComponentes, comps.size());
+        System.out.println("\nPrimeiros " + limite + " componentes:");
+        for (int i = 0; i < limite; i++) {
+            List<Integer> c = comps.get(i);
+            System.out.print("C" + (i + 1) + " (" + c.size() + "): ");
+            for (int k = 0; k < Math.min(maxMembros, c.size()); k++) {
+                if (k > 0) System.out.print(", ");
+                System.out.print(getInformacao(c.get(k)));
+            }
+            if (c.size() > maxMembros) System.out.print(", ... (+" + (c.size() - maxMembros) + ")");
+            System.out.println();
+        }
+    }
+
+    // grava todos os componentes, com todos os membros, num arquivo texto.
+    public void salvaComponentes(String arquivo) throws java.io.IOException {
+        List<List<Integer>> comps = componentes();
+        try (java.io.PrintWriter out = new java.io.PrintWriter(
+                java.nio.file.Files.newBufferedWriter(java.nio.file.Paths.get(arquivo),
+                        java.nio.charset.StandardCharsets.UTF_8))) {
+            out.println("Total de componentes: " + comps.size());
+            for (int i = 0; i < comps.size(); i++) {
+                List<Integer> c = comps.get(i);
+                out.println();
+                out.println("Componente " + (i + 1) + " - " + c.size() + " vértice(s)");
+                for (int v : c) {
+                    out.println("  " + getInformacao(v));
+                }
+            }
+        }
+    }
+
+    // =====================================================================
+    // QUESTÃO 3 - verificação de conexidade
+    // =====================================================================
+
+    // a partir da questão 2: o grafo é (fracamente) conexo se todos os vértices
+    // estão num único componente. por convenção, o grafo vazio é considerado conexo.
+    public boolean ehConexo() {
+        return componentes().size() <= 1;
+    }
+
+    public void imprimeConexidade() {
+        int qtd = componentes().size();
+        if (qtd <= 1) {
+            System.out.println("O grafo é CONEXO (fracamente conexo): 1 componente.");
+        } else {
+            System.out.println("O grafo é DESCONEXO: " + qtd + " componentes.");
         }
     }
 }
