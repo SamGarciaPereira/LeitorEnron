@@ -35,6 +35,9 @@ public class Main {
             System.out.println("8 - Componentes do grafo");
             System.out.println("9 - Verificar se o grafo é conexo");
             System.out.println("10 - Árvore Geradora Mínima (Kruskal)");
+            System.out.println("11 - Encontrar componentes (lista todos os membros)");
+            System.out.println("12 - Verificar se um conjunto de e-mails é clique");
+            System.out.println("13 - Verificar se um conjunto de e-mails é clique maximal");
             System.out.println("0 - Sair");
             System.out.print("Opção: ");
 
@@ -103,6 +106,19 @@ public class Main {
                 case "10":   // Kruskal + union-find: floresta de menor peso total
                     g.imprimeKruskal();
                     break;
+                case "11":
+                    g.encontraComponentes();
+                    break;
+                case "12": {
+                    List<Integer> v = lerConjunto(g, in);
+                    if (v != null) System.out.println(g.eClique(v) ? "É clique." : "NÃO é clique.");
+                    break;
+                }
+                case "13": {
+                    List<Integer> v = lerConjunto(g, in);
+                    if (v != null) System.out.println(g.eMaximal(v) ? "É clique maximal." : "NÃO é clique maximal.");
+                    break;
+                }
                 case "0":
                     return;
                 default:
@@ -116,6 +132,22 @@ public class Main {
         System.out.print(pergunta);
         int v = g.indiceDe(in.nextLine().trim().toLowerCase());
         if (v < 0) System.out.println("E-mail não encontrado na base.");
+        return v;
+    }
+
+    /** lê e-mails separados por vírgula ou espaço; null se algum não estiver na base. */
+    private static List<Integer> lerConjunto(GrafoEnron g, Scanner in) {
+        System.out.print("E-mails (separados por vírgula ou espaço): ");
+        List<Integer> v = new java.util.ArrayList<>();
+        for (String e : in.nextLine().trim().toLowerCase().split("[,\\s]+")) {
+            if (e.isEmpty()) continue;
+            int i = g.indiceDe(e);
+            if (i < 0) {
+                System.out.println("E-mail não encontrado na base: " + e);
+                return null;
+            }
+            v.add(i);
+        }
         return v;
     }
 
