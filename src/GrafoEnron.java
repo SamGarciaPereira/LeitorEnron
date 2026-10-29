@@ -859,4 +859,134 @@ public class GrafoEnron {
             System.out.println("  ... e mais " + (agm.arestas.size() - mostrar));
         }
     }
+
+    // CARGA DE ARQUIVO PAJEK (.net)
+
+    // lê um arquivo Pajek: *Vertices ('id "rótulo"'), *Edges (sem sentido) e *Arcs (u -> v).
+    // *Edges grava os dois sentidos. laços são ignorados; peso ausente vale 1.
+    public static GrafoEnron pajekLoader(String arquivo) throws java.io.IOException {
+        try (java.io.BufferedReader r = java.nio.file.Files.newBufferedReader(
+                java.nio.file.Paths.get(arquivo), java.nio.charset.StandardCharsets.UTF_8)) {
+
+            GrafoEnron g = null;
+            String secao = "";
+            String linha;
+            while ((linha = r.readLine()) != null) {
+                linha = linha.trim();
+                if (linha.isEmpty() || linha.startsWith("%")) continue;
+
+                if (linha.charAt(0) == '*') {
+                    String[] partes = linha.split("\\s+");
+                    secao = partes[0].toLowerCase();
+                    if (secao.equals("*vertices")) {
+                        g = new GrafoEnron(Integer.parseInt(partes[1]));
+                    }
+                    continue;
+                }
+                if (g == null) {
+                    throw new java.io.IOException("Arquivo Pajek sem a seção *Vertices antes dos dados.");
+                }
+
+                if (secao.equals("*vertices")) {
+                    // rótulo lido entre aspas (pode ter espaços)
+                    int id = Integer.parseInt(linha.split("\\s+", 2)[0]);
+                    int ini = linha.indexOf('"');
+                    int fim = linha.lastIndexOf('"');
+                    String rotulo = (ini >= 0 && fim > ini)
+                            ? linha.substring(ini + 1, fim)
+                            : String.valueOf(id);
+                    g.seta_informacao(id - 1, rotulo);   // ids do Pajek começam em 1
+                } else if (secao.equals("*edges") || secao.equals("*arcs")) {
+                    String[] t = linha.split("\\s+");
+                    int u = Integer.parseInt(t[0]) - 1;
+                    int v = Integer.parseInt(t[1]) - 1;
+                    int peso = t.length > 2 ? (int) Math.round(Double.parseDouble(t[2])) : 1;
+                    if (u == v) continue;
+                    g.cria_adjacencia(u, v, peso);
+                    if (secao.equals("*edges")) g.cria_adjacencia(v, u, peso);
+                }
+            }
+            if (g == null) {
+                throw new java.io.IOException("Arquivo Pajek sem a seção *Vertices.");
+            }
+            return g;
+        }
+    }
+
+    // GRAFO NÃO DIRECIONADO - ciclo e coeficiente de agrupamento
+    // (supõem arestas simétricas, como as de pajekLoader)
+
+    // cada aresta aparece duas vezes nas listas.
+    public int getNumArestasNaoDirecionadas() {
+        return getNumArestas() / 2;
+    }
+
+    // E - V + C: arestas além da floresta geradora. 0 = acíclico; > 0 = há ciclo.
+    // ehCiclico() não serve aqui: u -> v -> u contaria como ciclo.
+    public int numeroCiclomatico() {
+        return getNumArestasNaoDirecionadas() - numVertices + componentes().size();
+    }
+
+    public boolean ehCiclicoNaoDirecionado() {
+        return numeroCiclomatico() > 0;
+    }
+
+    // coeficiente de agrupamento local: C_i = 2 * T_i / (k_i * (k_i - 1)),
+    // T_i = arestas entre os vizinhos de i. grau < 2 -> C_i = 0.
+    public double[] coeficientesAgrupamento() {
+        List<java.util.Set<Integer>> vizinhos = new ArrayList<>(numVertices);
+        for (int i = 0; i < numVertices; i++) {
+            java.util.Set<Integer> s = new java.util.HashSet<>();
+            for (Aresta a : vertices[i].adjacencias) {
+                if (a.destino != i) s.add(a.destino);
+            }
+            vizinhos.add(s);
+        }
+
+        double[] c = new double[numVertices];
+        for (int i = 0; i < numVertices; i++) {
+            int k = vizinhos.get(i).size();
+            if (k < 2) continue;
+
+            // u < v conta cada par uma vez
+            long triangulos = 0;
+            for (int u : vizinhos.get(i)) {
+                java.util.Set<Integer> vu = vizinhos.get(u);
+                for (int v : vizinhos.get(i)) {
+                    if (u < v && vu.contains(v)) triangulos++;
+                }
+            }
+            c[i] = 2.0 * triangulos / ((double) k * (k - 1));
+        }
+        return c;
+    }
+
+    // média dos coeficientes: sobre todos os vértices (true) ou só os de grau >= 2 (false).
+    public double coeficienteMedio(double[] c, boolean incluirGrauMenorQue2) {
+        double soma = 0;
+        int n = 0;
+        for (int i = 0; i < numVertices; i++) {
+            if (!incluirGrauMenorQue2 && vertices[i].adjacencias.size() < 2) continue;
+            soma += c[i];
+            n++;
+        }
+        return n == 0 ? 0 : soma / n;
+    }
+
+    // n vértices de maior coeficiente; empate: maior grau, depois menor índice.
+    public List<Integer> topAgrupamento(double[] c, int n) {
+        List<Integer> idx = new ArrayList<>(numVertices);
+        for (int i = 0; i < numVertices; i++) idx.add(i);
+        idx.sort((a, b) -> {
+            int cmp = Double.compare(c[b], c[a]);
+            if (cmp != 0) return cmp;
+            cmp = Integer.compare(vertices[b].adjacencias.size(), vertices[a].adjacencias.size());
+            return cmp != 0 ? cmp : Integer.compare(a, b);
+        });
+        return idx.subList(0, Math.min(n, numVertices));
+    }
+
+    public int grau(int i) {
+        return verticeValido(i) ? vertices[i].adjacencias.size() : 0;
+    }
 }
