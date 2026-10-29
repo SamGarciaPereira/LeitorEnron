@@ -989,4 +989,118 @@ public class GrafoEnron {
     public int grau(int i) {
         return verticeValido(i) ? vertices[i].adjacencias.size() : 0;
     }
+
+    // =====================================================================
+    // TDE 4 - componentes, clique e clique maximal
+    // =====================================================================
+
+    // retorna a quantidade de componentes e imprime os vértices de cada um.
+    // em grafo direcionado são considerados os componentes FRACAMENTE conexos
+    // (o sentido das arestas é ignorado), reaproveitando componentes().
+    public int encontraComponentes() {
+        List<List<Integer>> comps = componentes();
+        System.out.println("Quantidade de componentes: " + comps.size());
+        for (int i = 0; i < comps.size(); i++) {
+            List<Integer> c = comps.get(i);
+            System.out.print("Componente " + (i + 1) + " (" + c.size() + " vértice(s)): ");
+            for (int k = 0; k < c.size(); k++) {
+                if (k > 0) System.out.print(", ");
+                System.out.print(rotuloOuIndice(c.get(k)));
+            }
+            System.out.println();
+        }
+        return comps.size();
+    }
+
+    // V forma um clique se todo par de vértices distintos de V é adjacente.
+    // como o grafo é direcionado, u e v são adjacentes se existir u -> v OU v -> u
+    // (mesmo critério dos componentes fracamente conexos). vértices repetidos em V
+    // são considerados uma única vez; índice inválido -> false. o conjunto vazio e
+    // o conjunto unitário são cliques (não há par a verificar).
+    public boolean eClique(java.util.Collection<Integer> V) {
+        if (V == null) return false;
+        java.util.Set<Integer> conjunto = new java.util.LinkedHashSet<>(V);
+        for (int v : conjunto) {
+            if (!verticeValido(v)) return false;
+        }
+        List<Integer> lista = new ArrayList<>(conjunto);
+        for (int a = 0; a < lista.size(); a++) {
+            for (int b = a + 1; b < lista.size(); b++) {
+                if (!adjacentesSemSentido(lista.get(a), lista.get(b))) return false;
+            }
+        }
+        return true;
+    }
+
+    // V é um clique maximal se é clique e nenhum vértice fora de V é adjacente
+    // a todos os vértices de V (senão ele poderia ser incluído, aumentando o clique).
+    // basta testar os vizinhos de um vértice qualquer de V: quem não é vizinho dele
+    // já não pode estender o clique.
+    public boolean eMaximal(java.util.Collection<Integer> V) {
+        if (!eClique(V)) return false;
+        java.util.Set<Integer> conjunto = new java.util.HashSet<>(V);
+
+        // clique vazio só é maximal se o grafo não tiver vértices.
+        if (conjunto.isEmpty()) return numVertices == 0;
+
+        int v0 = conjunto.iterator().next();
+        for (int w : vizinhosSemSentido(v0)) {
+            if (conjunto.contains(w)) continue;
+            boolean ligadoATodos = true;
+            for (int v : conjunto) {
+                if (!adjacentesSemSentido(w, v)) {
+                    ligadoATodos = false;
+                    break;
+                }
+            }
+            if (ligadoATodos) return false;   // w estende o clique: V não é maximal
+        }
+        return true;
+    }
+
+    // versões que recebem os índices como vetor: eClique(new int[]{0, 1, 2}).
+    public boolean eClique(int[] V) {
+        return V != null && eClique(paraLista(V));
+    }
+
+    public boolean eMaximal(int[] V) {
+        return V != null && eMaximal(paraLista(V));
+    }
+
+    private static List<Integer> paraLista(int[] V) {
+        List<Integer> l = new ArrayList<>(V.length);
+        for (int v : V) l.add(v);
+        return l;
+    }
+
+    // existe aresta u -> v ou v -> u (laços u == v não contam).
+    private boolean adjacentesSemSentido(int u, int v) {
+        if (u == v) return false;
+        return temAresta(u, v) || temAresta(v, u);
+    }
+
+    private boolean temAresta(int i, int j) {
+        for (Aresta a : vertices[i].adjacencias) {
+            if (a.destino == j) return true;
+        }
+        return false;
+    }
+
+    // vizinhos de v ignorando o sentido: destinos das arestas de saída de v e
+    // origens das arestas que chegam em v (essas exigem varrer todas as listas).
+    private java.util.Set<Integer> vizinhosSemSentido(int v) {
+        java.util.Set<Integer> viz = new java.util.HashSet<>();
+        for (Aresta a : vertices[v].adjacencias) {
+            if (a.destino != v) viz.add(a.destino);
+        }
+        for (int u = 0; u < numVertices; u++) {
+            if (u != v && temAresta(u, v)) viz.add(u);
+        }
+        return viz;
+    }
+
+    private String rotuloOuIndice(int v) {
+        String r = vertices[v].informacao;
+        return (r == null || r.isEmpty()) ? String.valueOf(v) : r;
+    }
 }
