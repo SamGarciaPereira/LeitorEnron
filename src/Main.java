@@ -16,7 +16,7 @@ import java.util.Scanner;
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        String raiz = args.length > 0 ? args[0] : "maildir";
+        String raiz = args.length > 0 ? args[0] : "maildir";   // pasta da base; padrão "maildir"
 
         long inicio = System.currentTimeMillis();
         GrafoEnron g = LeitorEnron.carregar(raiz);
@@ -34,16 +34,17 @@ public class Main {
             System.out.println("7 - Verificar se o grafo é cíclico");
             System.out.println("8 - Componentes do grafo");
             System.out.println("9 - Verificar se o grafo é conexo");
+            System.out.println("10 - Árvore Geradora Mínima (Kruskal)");
             System.out.println("0 - Sair");
             System.out.print("Opção: ");
 
             switch (in.nextLine().trim()) {
-                case "1": {
+                case "1": {   // lista as arestas de saída do vértice
                     int v = lerVertice(g, in, "E-mail: ");
                     if (v >= 0) mostraDestinos(g, v);
                     break;
                 }
-                case "2": {
+                case "2": {   // Dijkstra adaptado (custo 1/peso): caminho de maior dependência
                     int a = lerVertice(g, in, "E-mail de origem (A): ");
                     if (a < 0) break;
                     int c = lerVertice(g, in, "E-mail de destino (C): ");
@@ -51,14 +52,14 @@ public class Main {
                     g.imprime_caminho_critico(a, c);
                     break;
                 }
-                case "3": {
+                case "3": {   // contagens + ranking de graus de saída e entrada
                     System.out.println("\nMÉTRICAS DO GRAFO:");
                     System.out.println("Número de vértices: " + g.getNumVertices());
                     System.out.println("Número de arestas: " + g.getNumArestas());
                     g.imprimeTop20Graus();
                     break;
                 }
-                case "4": {
+                case "4": {   // DFS: encontra algum caminho de X até Y
                     int x = lerVertice(g, in, "E-mail de origem (X): ");
                     if (x < 0) break;
                     int y = lerVertice(g, in, "E-mail de destino (Y): ");
@@ -66,7 +67,7 @@ public class Main {
                     g.imprimeDFS(x, y);
                     break;
                 }
-                case "5": {
+                case "5": {   // BFS: caminho com o menor número de saltos
                     int x = lerVertice(g, in, "E-mail de origem (X): ");
                     if (x < 0) break;
                     int y = lerVertice(g, in, "E-mail de destino (Y): ");
@@ -74,7 +75,7 @@ public class Main {
                     g.imprimeBFS(x, y);
                     break;
                 }
-                case "6": {
+                case "6": {   // BFS em camadas: vértices exatamente a D saltos de N
                     int n = lerVertice(g, in, "E-mail (N): ");
                     if (n < 0) break;
                     System.out.print("Distância (D): ");
@@ -98,6 +99,9 @@ public class Main {
                 }
                 case "9":
                     g.imprimeConexidade();
+                    break;
+                case "10":   // Kruskal + union-find: floresta de menor peso total
+                    g.imprimeKruskal();
                     break;
                 case "0":
                     return;

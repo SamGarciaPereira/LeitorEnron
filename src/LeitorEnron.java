@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 public class LeitorEnron {
 
     // espaço, vírgula, < > e ; são os separadores de endereços no cabeçalho.
+    // ex.: em "Ana <ana@enron.com>, beto@enron.com" casa ana@enron.com e beto@enron.com.
     private static final Pattern EMAIL = Pattern.compile("[^\\s,<>;]+@[^\\s,<>;]+");
 
     private final Map<String, Integer> indice = new HashMap<>();   // e-mail -> índice do vértice
@@ -41,7 +42,9 @@ public class LeitorEnron {
         return new LeitorEnron().construir(Paths.get(raiz));
     }
 
+    // fluxo: 1) lê todos os arquivos  2) cria um vértice por e-mail  3) cria as arestas com os pesos.
     private GrafoEnron construir(Path raiz) throws IOException {
+        // etapa 1: percorre todas as subpastas e processa cada arquivo (um arquivo = um e-mail).
         try (Stream<Path> arquivos = Files.walk(raiz)) {
             arquivos.filter(Files::isRegularFile).forEach(this::processa);
         }
@@ -49,9 +52,11 @@ public class LeitorEnron {
         // o grafo só pode ser criado aqui: o número de vértices é fixado no
         // construtor e só é conhecido após a leitura de todos os arquivos.
         GrafoEnron g = new GrafoEnron(emails.size());
+        // etapa 2: o vértice i recebe como rótulo o e-mail de índice i.
         for (int i = 0; i < emails.size(); i++) {
             g.seta_informacao(i, emails.get(i));
         }
+        // etapa 3: cada par (origem, destino) contado vira uma aresta com seu peso.
         for (Map.Entry<Long, Integer> e : pesos.entrySet()) {
             long chave = e.getKey();
             // >>> 32 recupera a origem; o cast para int mantém apenas o destino.
@@ -60,6 +65,7 @@ public class LeitorEnron {
         return g;
     }
 
+    // fases: lê o cabeçalho -> descarta e-mail repetido -> soma 1 em cada par remetente x destinatário.
     private void processa(Path arquivo) {
         // o mapa define os únicos cabeçalhos aproveitados. qualquer outro devolve
         // null em campos.get e é descartado sem verificação adicional.
@@ -99,7 +105,7 @@ public class LeitorEnron {
                 // origem nos 32 bits altos e destino nos baixos: um único long
                 // identifica o par e dispensa um mapa de mapas.
                 long chave = ((long) indiceDe(origem) << 32) | indiceDe(destino);
-                pesos.merge(chave, 1, Integer::sum);
+                pesos.merge(chave, 1, Integer::sum);   // par novo começa em 1; existente soma 1
             }
         }
     }

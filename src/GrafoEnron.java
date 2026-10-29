@@ -16,8 +16,10 @@ import java.util.List;
 import java.util.Map;
 
 // grafo direcionado, ponderado e rotulado. não depende do domínio de e-mail.
+// representação por lista de adjacência: cada vértice guarda só as arestas que saem dele.
 public class GrafoEnron {
 
+    // seta i -> destino com peso (no projeto: quantos e-mails i mandou para destino).
     public static class Aresta {
         private final int destino;   // índice do vértice de destino
         private int peso;   // nº de mensagens 
@@ -36,6 +38,7 @@ public class GrafoEnron {
         }
     }
 
+    // rótulo (o e-mail) + lista de arestas de saída.
     private static class Vertice {
         String informacao = "";   // o rótulo (e-mail)
         List<Aresta> adjacencias = new ArrayList<>();
@@ -113,6 +116,7 @@ public class GrafoEnron {
         return verticeValido(i) ? vertices[i].informacao : null;
     }
 
+    // copia os índices dos vizinhos de i em adj e devolve quantos são.
     public int adjacentes(int i, int[] adj) {
         if (!verticeValido(i)) {
             return 0;
@@ -146,6 +150,8 @@ public class GrafoEnron {
     }
 
     //distância de custo mínimo da origem até cada vértice.
+    // a cada rodada fixa o vértice mais próximo ainda aberto e tenta melhorar seus vizinhos.
+    // a escolha do menor é uma varredura linear (sem fila de prioridade): O(V²).
     public int[] dijkstra(int origem) {
         int[] dist = new int[numVertices];
         boolean[] visitado = new boolean[numVertices];
@@ -171,6 +177,7 @@ public class GrafoEnron {
             // marcar como visitado impede reprocessamento e trata os ciclos.
             visitado[u] = true;
 
+            // relaxamento: se passar por u deixa o vizinho mais barato, atualiza.
             for (Aresta a : vertices[u].adjacencias) {
                 if (!visitado[a.destino] && dist[u] + a.peso < dist[a.destino]) {
                     dist[a.destino] = dist[u] + a.peso;
@@ -205,7 +212,7 @@ public class GrafoEnron {
         }
 
         double[] custo = new double[numVertices];
-        int[] anterior = new int[numVertices];
+        int[] anterior = new int[numVertices];   // de onde se chegou a cada vértice; reconstrói o caminho
         boolean[] visitado = new boolean[numVertices];
         java.util.Arrays.fill(custo, Double.POSITIVE_INFINITY);
         java.util.Arrays.fill(anterior, -1);
@@ -241,6 +248,7 @@ public class GrafoEnron {
             return new CaminhoCritico(Collections.emptyList(), 0);
         }
 
+        // volta do destino até a origem (anterior == -1), somando os pesos originais.
         List<Integer> caminho = new ArrayList<>();
         int dependencia = 0;
         for (int v = destino; v != -1; v = anterior[v]) {
@@ -286,6 +294,7 @@ public class GrafoEnron {
     }
 
     // calcula e exibe os 20 indivíduos com maior grau de saída e entrada
+    // grau de saída = nº de destinatários distintos; grau de entrada = nº de remetentes distintos.
     public void imprimeTop20Graus() {
         int[] grauSaida = new int[numVertices];
         int[] grauEntrada = new int[numVertices];
@@ -313,6 +322,7 @@ public class GrafoEnron {
         int[] maioresGraus = new int[20];
         int[] indicesMaiores = new int[20];
 
+        // -1 marca posição do ranking ainda vazia.
         for (int i = 0; i < 20; i++) {
             indicesMaiores[i] = -1;
             maioresGraus[i] = -1;
@@ -321,6 +331,8 @@ public class GrafoEnron {
         for (int i = 0; i < numVertices; i++) {
             int grauAtual = graus[i];
 
+            // o ranking fica sempre ordenado (maior primeiro); só entra quem supera o 20º.
+            // a inserção funciona como um passo do insertion sort.
             if (grauAtual > maioresGraus[19]) {
                 int posicaoInsercao = 19;
 
@@ -346,6 +358,7 @@ public class GrafoEnron {
     }
 
     // inicia a busca em profundidade retornando a lista de nós do caminho
+    // a DFS encontra algum caminho, não necessariamente o mais curto (para isso, ver BFS).
     public List<Integer> buscaEmProfundidade(int origem, int destino) {
         if (!verticeValido(origem) || !verticeValido(destino)) {
             return Collections.emptyList();
@@ -363,15 +376,18 @@ public class GrafoEnron {
 
     // recursão da busca, o vetor de visitados é compartilhado para evitar ciclos
     private boolean dfsRecursiva(int u, int destino, boolean[] visitado, List<Integer> caminho) {
+        // 1) marca u e o coloca no caminho atual.
         visitado[u] = true;
         caminho.add(u);
 
+        // 2) caso base: chegou ao destino.
         if (u == destino) {
             return true;
         }
 
         int qtdAdjacencias = vertices[u].adjacencias.size();
 
+        // 3) desce recursivamente pelo primeiro vizinho não visitado; se ele achar, propaga o true.
         for (int i = 0; i < qtdAdjacencias; i++) {
             Aresta a = vertices[u].adjacencias.get(i);
 
@@ -382,6 +398,7 @@ public class GrafoEnron {
             }
         }
 
+        // 4) backtracking: nenhum vizinho levou ao destino, então u sai do caminho.
         caminho.remove(caminho.size() - 1);
         return false;
     }
@@ -425,6 +442,7 @@ public class GrafoEnron {
         int[] anterior = new int[numVertices];   // de qual vértice cada um foi descoberto
         Arrays.fill(anterior, -1);
  
+        // fila FIFO: quem foi descoberto primeiro é expandido primeiro, garantindo as camadas.
         ArrayDeque<Integer> fila = new ArrayDeque<>();
         visitado[origem] = true;   // marca ao entrar na fila: nenhum vértice entra duas vezes
         fila.add(origem);
@@ -455,6 +473,7 @@ public class GrafoEnron {
         }
  
         // reconstrói o caminho voltando do destino até a origem pelo vetor anterior
+        // (a origem é o único vértice com anterior == -1). depois inverte para ficar origem -> destino.
         List<Integer> caminho = new ArrayList<>();
         for (int v = destino; v != -1; v = anterior[v]) {
             caminho.add(v);
@@ -504,6 +523,7 @@ public class GrafoEnron {
             return resultado;
         }
  
+        // distancia[] faz o papel do vetor de visitados e ainda guarda o nº de saltos até N.
         int[] distancia = new int[numVertices];
         Arrays.fill(distancia, -1);   // -1 = ainda não visitado; evita ciclos
         distancia[n] = 0;
@@ -752,6 +772,91 @@ public class GrafoEnron {
             System.out.println("O grafo é CONEXO (fracamente conexo): 1 componente.");
         } else {
             System.out.println("O grafo é DESCONEXO: " + qtd + " componentes.");
+        }
+    }
+
+    // =====================================================================
+    // AGM - árvore geradora mínima (Kruskal)
+    // =====================================================================
+
+    // árvore geradora mínima pelo algoritmo de Kruskal. a AGM é definida para grafos não
+    // direcionados, então cada aresta vale como ligação sem sentido. se existirem A->B e B->A,
+    // a de menor peso entra e a outra é descartada por formar ciclo. grafo desconexo gera uma
+    // floresta (uma árvore por componente). o peso usado é o da aresta: mínimo = vínculos mais fracos.
+    public ArvoreGeradoraMinima kruskal() {
+        // 1) reúne todas as arestas como {origem, destino, peso}
+        List<int[]> todas = new ArrayList<>();
+        for (int i = 0; i < numVertices; i++) {
+            for (Aresta a : vertices[i].adjacencias) {
+                todas.add(new int[]{i, a.destino, a.peso});
+            }
+        }
+        // 2) ordena do menor para o maior peso
+        todas.sort((x, y) -> Integer.compare(x[2], y[2]));
+
+        // union-find: pai[v] leva ao representante do conjunto de v. começa cada vértice sozinho.
+        int[] pai = new int[numVertices];
+        int[] tamanho = new int[numVertices];
+        for (int i = 0; i < numVertices; i++) {
+            pai[i] = i;
+            tamanho[i] = 1;
+        }
+
+        List<int[]> escolhidas = new ArrayList<>();
+        long total = 0;
+        int componentes = numVertices;   // cada união bem-sucedida reduz um componente
+
+        // 3) da mais leve para a mais pesada: só entra se ligar dois conjuntos diferentes
+        for (int[] e : todas) {
+            int ra = encontrar(pai, e[0]);
+            int rb = encontrar(pai, e[1]);
+            if (ra == rb) continue;   // já conectados: a aresta fecharia um ciclo
+
+            // une o conjunto menor ao maior para manter as árvores do union-find rasas
+            if (tamanho[ra] < tamanho[rb]) {
+                int t = ra;
+                ra = rb;
+                rb = t;
+            }
+            pai[rb] = ra;
+            tamanho[ra] += tamanho[rb];
+
+            escolhidas.add(e);
+            total += e[2];
+            componentes--;
+        }
+        return new ArvoreGeradoraMinima(escolhidas, total, componentes);
+    }
+
+    // representante (raiz) do conjunto de v.
+    private static int encontrar(int[] pai, int v) {
+        int raiz = v;
+        while (pai[raiz] != raiz) raiz = pai[raiz];
+        // compressão de caminho: quem foi visitado passa a apontar direto para a raiz
+        while (pai[v] != raiz) {
+            int proximo = pai[v];
+            pai[v] = raiz;
+            v = proximo;
+        }
+        return raiz;
+    }
+
+    public void imprimeKruskal() {
+        ArvoreGeradoraMinima agm = kruskal();
+        System.out.println("\nÁrvore Geradora Mínima (Kruskal):");
+        System.out.println("Vértices: " + numVertices);
+        System.out.println("Componentes conexos: " + agm.componentes);
+        System.out.println("Arestas na árvore: " + agm.arestas.size());
+        System.out.println("Peso total: " + agm.pesoTotal);
+
+        int mostrar = Math.min(20, agm.arestas.size());
+        System.out.println("Primeiras " + mostrar + " arestas escolhidas (da mais leve):");
+        for (int i = 0; i < mostrar; i++) {
+            int[] e = agm.arestas.get(i);
+            System.out.println("  " + getInformacao(e[0]) + " -- " + getInformacao(e[1]) + " (peso " + e[2] + ")");
+        }
+        if (agm.arestas.size() > mostrar) {
+            System.out.println("  ... e mais " + (agm.arestas.size() - mostrar));
         }
     }
 }

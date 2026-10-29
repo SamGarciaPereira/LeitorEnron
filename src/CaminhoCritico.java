@@ -3,7 +3,7 @@ import java.util.List;
 // resultado de GrafoEnron.caminhoCritico: sequência de vértices e a dependência acumulada
 // (soma dos pesos originais das arestas) ao longo do caminho.
 public class CaminhoCritico {
-    public final List<Integer> caminho;
+    public final List<Integer> caminho;   // vazio = não há caminho entre os vértices
     public final int dependenciaAcumulada;
 
     CaminhoCritico(List<Integer> caminho, int dependenciaAcumulada) {
